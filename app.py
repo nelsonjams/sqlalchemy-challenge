@@ -103,29 +103,29 @@ def tobs():
 
     return jsonify(tobs_list)
 
-@app.route("/api/v1.0/start")
-def start(start=NONE):
+@app.route("/api/v1.0/<start>")
+@app.route("/api/v1.0/<start>/<end>")
+def start_end(start, end=latest):
 
-    # Docstring
-    """Return a JSON list of tmin, tmax, tavg for the dates greater than or equal to the date provided"""
+    '''
+    Return the minimum temperature, the average temperature, and the max temperature for a given start or start-end range
+    '''
 
-    from_start = session.query(Measurement.date, func.min(Measurement.tobs), func.avg(Measurement.tobs), func.max(Measurement.tobs)).filter(Measurement.date >= start).group_by(Measurement.date).all()
-    
-    from_start_list=list(from_start)
-    
-    return jsonify(from_start_list)
+    start_date_dt = dt.datetime.strptime(start, '%Y-%m-%d')
+    if end == latest:
+        end_date_dt = end
+    else:
+        end_date_dt = dt.datetime.strptime(end, '%Y-%m-%d')
 
-@app.route("/api/v1.0/start/end")
-def start_end(start=NONE, end=NONE):
+    sel = [func.min(Measurement.tobs), func.avg(Measurement.tobs), func.max(Measurement.tobs)]
+    temps = session.query(*sel). \
+                filter(Measurement.date>=start_date_dt). \
+                filter(Measurement.date<=end_date_dt).all()[0]
     
-    # Docstring
-    """Return a JSON list of tmin, tmax, tavg for the dates in range of start date and end date inclusive"""
-    
-    between_dates = session.query(Measurement.date, func.min(Measurement.tobs), func.avg(Measurement.tobs), func.max(Measurement.tobs)).filter(Measurement.date >= start).filter(Measurement.date <= end).group_by(Measurement.date).all()
-    
-    between_dates_list=list(between_dates)
-    
-    return jsonify(between_dates_list)
+    results_list = [{"temp_min": temps[0]}, 
+                    {"temp_avg": temps[1]}, 
+                    {"temp_max": temps[2]}]
+    return jsonify(results_list)
 
 
 if __name__ == '__main__':
